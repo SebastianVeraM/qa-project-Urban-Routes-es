@@ -35,6 +35,9 @@ def retrieve_phone_code(driver) -> str:
 
 
 class UrbanRoutesPage:
+    """Reúne los localizadores y acciones para interactuar con Urban Routes."""
+
+    # Campos de origen y destino del viaje.
     from_field = (By.ID, 'from')
     to_field = (By.ID, 'to')
 
@@ -57,6 +60,7 @@ class UrbanRoutesPage:
     def get_to(self):
         return self.driver.find_element(*self.to_field).get_property('value')
 
+    # Localizadores de tarifa, teléfono y confirmación por SMS.
     request_fares_button = (
         By.XPATH, "//button[normalize-space(.)='Pedir un taxi']")
     comfort_tariff = (By.XPATH, "//*[normalize-space(text())='Comfort']")
@@ -68,6 +72,7 @@ class UrbanRoutesPage:
     phone_code = (By.ID, 'code')
     phone_confirm = (
         By.XPATH, "//button[contains(.,'Confirmar') or contains(.,'Confirm')]")
+    # Localizadores para abrir el método de pago y registrar una tarjeta.
     payment_button = (
         By.XPATH, "//div[contains(concat(' ', normalize-space(@class), ' '), ' pp-button ')][.//div[contains(concat(' ', normalize-space(@class), ' '), ' pp-text ') and normalize-space(.)='Método de pago']]")
     add_card_button = (
@@ -76,6 +81,7 @@ class UrbanRoutesPage:
     card_code = (By.CSS_SELECTOR, "input#code.card-input")
     card_add_button = (By.XPATH, "//button[@type='submit' and contains(concat(' ', normalize-space(@class), ' '), ' button ') and contains(concat(' ', normalize-space(@class), ' '), ' full ') and normalize-space(.)='Agregar']")
     payment_close_button = (By.CSS_SELECTOR, "button.close-button.section-close")
+    # Mensaje y extras opcionales del pedido.
     driver_message = (By.ID, 'comment')
     blanket_tissues_input = (
         By.XPATH, "//*[normalize-space(.)='Manta y pañuelos']/ancestor::*[.//input[contains(@class,'switch-input')]][1]//input[contains(@class,'switch-input')]")
@@ -83,6 +89,7 @@ class UrbanRoutesPage:
         By.XPATH, "//*[normalize-space(.)='Manta y pañuelos']/ancestor::*[.//input[contains(@class,'switch-input')]][1]//span[contains(concat(' ', normalize-space(@class), ' '), ' slider ')]")
     ice_cream_plus = (
         By.XPATH, "//*[normalize-space(.)='Helado']/ancestor::*[.//div[contains(@class,'counter-plus')]][1]//div[contains(@class,'counter-plus') and normalize-space(.)='+' ]")
+    # Elementos que indican que el pedido está en búsqueda y que ya hay conductor.
     order_button = (By.CSS_SELECTOR, "button.smart-button")
     search_modal = (
         By.XPATH, "//*[contains(normalize-space(.),'Buscar automóvil') or contains(normalize-space(.),'Buscar un taxi')]")
@@ -90,9 +97,11 @@ class UrbanRoutesPage:
     driver_rating = (By.CSS_SELECTOR, "div.order-button .order-btn-rating")
 
     def wait(self, locator, timeout=30):
+        # Espera a que el elemento exista en el DOM antes de usarlo.
         return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
 
     def click(self, locator, timeout=30):
+        # Desplaza el elemento a la vista y hace clic cuando está habilitado.
         element = WebDriverWait(self.driver, timeout).until(
             EC.visibility_of_element_located(locator))
         self.driver.execute_script(
@@ -101,6 +110,7 @@ class UrbanRoutesPage:
             EC.element_to_be_clickable(locator)).click()
 
     def open_app(self, url):
+        # Abre la aplicación y espera a que carguen los campos de dirección.
         self.driver.get(url)
         WebDriverWait(self.driver, 30).until(lambda driver: driver.execute_script(
             "return document.readyState") == "complete")
@@ -120,6 +130,7 @@ class UrbanRoutesPage:
         self.click(self.comfort_tariff)
 
     def add_phone(self, phone_number):
+        # Abre el formulario, captura el código SMS y confirma el teléfono.
         self.click(self.phone_number_field)
         self.wait(self.phone_field).send_keys(phone_number)
         self.click(self.phone_next)
@@ -127,6 +138,7 @@ class UrbanRoutesPage:
         self.click(self.phone_confirm)
 
     def close_payment_window(self):
+        # Localiza el botón de cierre activo y espera a que desaparezca el modal.
         def visible_close_button(driver):
             buttons = [
                 button for button in driver.find_elements(*self.payment_close_button)
@@ -140,7 +152,9 @@ class UrbanRoutesPage:
         close_button.click()
         WebDriverWait(self.driver, 15).until(EC.any_of(
             EC.staleness_of(close_button), EC.invisibility_of_element(close_button)))
+
     def add_card(self, number, code):
+        # TAB quita el foco del CVV y permite que se habilite el botón Agregar.
         self.click(self.payment_button)
         self.click(self.add_card_button)
         self.wait(self.card_number).send_keys(number)
@@ -156,12 +170,14 @@ class UrbanRoutesPage:
         self.wait(self.driver_message).send_keys(message)
 
     def scroll_to_extras(self):
+        # Desplaza el panel para que los controles de extras queden visibles.
         slider = WebDriverWait(self.driver, 30).until(
             EC.visibility_of_element_located(self.blanket_tissues_slider))
         self.driver.execute_script(
             "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", slider)
 
     def request_extras(self):
+        # Activa manta y pañuelos si hace falta y pide dos helados.
         checkbox = self.wait(self.blanket_tissues_input)
         if not checkbox.is_selected():
             self.click(self.blanket_tissues_slider)
@@ -169,11 +185,13 @@ class UrbanRoutesPage:
             self.click(self.ice_cream_plus)
 
     def order_taxi(self):
+        # Envía el pedido y espera a que aparezca el modal de búsqueda.
         self.click(self.order_button)
         return self.wait(self.search_modal)
 
 
 class TestUrbanRoutes:
+    """Prueba integral de solicitud de un taxi Comfort."""
 
     driver = None
 
@@ -186,20 +204,30 @@ class TestUrbanRoutes:
         cls.driver = webdriver.Chrome(options=options)
 
     def test_complete_taxi_order(self):
+        # Ejecuta el flujo y valida la ruta y la asignación del conductor.
         page = UrbanRoutesPage(self.driver)
         page.open_app(data.urban_routes_url)
+
+        # Configura y verifica las direcciones antes de elegir el servicio.
         page.set_route(data.address_from, data.address_to)
         assert page.get_from() == data.address_from
         assert page.get_to() == data.address_to
+
+        # Selecciona Comfort y completa los datos de contacto y pago.
         page.open_fare_options()
         page.select_comfort()
         page.add_phone(data.phone_number)
         page.add_card(data.card_number, data.card_code)
+
+        # Añade instrucciones para el conductor y los extras del viaje.
         page.set_driver_message(data.message_for_driver)
         page.scroll_to_extras()
         page.request_extras()
+
+        # Solicita el taxi y espera a que se asigne un conductor.
         page.order_taxi()
 
+        # Comprueba que aparezca la búsqueda y luego espera los datos del conductor.
         assert WebDriverWait(self.driver, 20).until(
             EC.visibility_of_element_located(page.search_modal))
         WebDriverWait(self.driver, 180).until(
