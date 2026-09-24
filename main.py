@@ -69,26 +69,25 @@ class UrbanRoutesPage:
     phone_confirm = (
         By.XPATH, "//button[contains(.,'Confirmar') or contains(.,'Confirm')]")
     payment_button = (
-        By.XPATH, "//*[contains(@class,'payment') or contains(@class,'pay')][self::button or @role='button' or contains(@class,'button')]")
+        By.XPATH, "//div[contains(concat(' ', normalize-space(@class), ' '), ' pp-button ')][.//div[contains(concat(' ', normalize-space(@class), ' '), ' pp-text ') and normalize-space(.)='Método de pago']]")
     add_card_button = (
-        By.XPATH, "//*[self::button or @role='button' or contains(@class,'button')][contains(.,'Agregar una tarjeta') or contains(.,'Add a card') or normalize-space(.)='Agregar']")
-    card_number = (By.ID, 'number')
-    card_code = (By.ID, 'code')
-    card_link = (
-        By.XPATH, "//*[self::button or @role='button' or contains(@class,'button')][normalize-space(.)='Enlace' or normalize-space(.)='Link']")
-    driver_message = (By.TAG_NAME, 'textarea')
-    blanket_toggle = (
-        By.XPATH, "//*[contains(.,'Manta') or contains(.,'manta')]/ancestor::*[.//input[@type='checkbox']][1]//input[@type='checkbox']")
-    tissues_toggle = (
-        By.XPATH, "//*[contains(.,'pañuelos') or contains(.,'Pañuelos')]/ancestor::*[.//input[@type='checkbox']][1]//input[@type='checkbox']")
+        By.XPATH, "//div[contains(concat(' ', normalize-space(@class), ' '), ' pp-row ')][.//div[contains(concat(' ', normalize-space(@class), ' '), ' pp-title ') and normalize-space(.)='Agregar tarjeta']]")
+    card_number = (By.CSS_SELECTOR, "input#number.card-input")
+    card_code = (By.CSS_SELECTOR, "input#code.card-input")
+    card_add_button = (By.XPATH, "//button[@type='submit' and contains(concat(' ', normalize-space(@class), ' '), ' button ') and contains(concat(' ', normalize-space(@class), ' '), ' full ') and normalize-space(.)='Agregar']")
+    payment_close_button = (By.CSS_SELECTOR, "button.close-button.section-close")
+    driver_message = (By.ID, 'comment')
+    blanket_tissues_input = (
+        By.XPATH, "//*[normalize-space(.)='Manta y pañuelos']/ancestor::*[.//input[contains(@class,'switch-input')]][1]//input[contains(@class,'switch-input')]")
+    blanket_tissues_slider = (
+        By.XPATH, "//*[normalize-space(.)='Manta y pañuelos']/ancestor::*[.//input[contains(@class,'switch-input')]][1]//span[contains(concat(' ', normalize-space(@class), ' '), ' slider ')]")
     ice_cream_plus = (
-        By.XPATH, "//*[contains(.,'Helado') or contains(.,'helado')]/ancestor::*[contains(@class,'counter') or contains(@class,'option')][1]//button[contains(.,'+') or @aria-label='plus' or @aria-label='increment']")
-    order_button = (
-        By.XPATH, "//button[contains(.,'Pedir un taxi') or contains(.,'Pedir taxi') or contains(.,'Order')]")
+        By.XPATH, "//*[normalize-space(.)='Helado']/ancestor::*[.//div[contains(@class,'counter-plus')]][1]//div[contains(@class,'counter-plus') and normalize-space(.)='+' ]")
+    order_button = (By.CSS_SELECTOR, "button.smart-button")
     search_modal = (
-        By.XPATH, "//*[contains(.,'Buscar un taxi') or contains(.,'taxi')][contains(@class,'modal') or contains(@class,'order')]")
-    driver_info = (
-        By.XPATH, "//*[contains(.,'ABO') or contains(.,'min estará aquí')]")
+        By.XPATH, "//*[contains(normalize-space(.),'Buscar automóvil') or contains(normalize-space(.),'Buscar un taxi')]")
+    driver_info = (By.CSS_SELECTOR, "div.order-button")
+    driver_rating = (By.CSS_SELECTOR, "div.order-button .order-btn-rating")
 
     def wait(self, locator, timeout=30):
         return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
@@ -127,23 +126,45 @@ class UrbanRoutesPage:
         self.wait(self.phone_code).send_keys(retrieve_phone_code(self.driver))
         self.click(self.phone_confirm)
 
+    def close_payment_window(self):
+        def visible_close_button(driver):
+            buttons = [
+                button for button in driver.find_elements(*self.payment_close_button)
+                if button.is_displayed() and button.is_enabled()
+            ]
+            return buttons[-1] if buttons else False
+
+        close_button = WebDriverWait(self.driver, 30).until(visible_close_button)
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", close_button)
+        close_button.click()
+        WebDriverWait(self.driver, 15).until(EC.any_of(
+            EC.staleness_of(close_button), EC.invisibility_of_element(close_button)))
     def add_card(self, number, code):
         self.click(self.payment_button)
         self.click(self.add_card_button)
         self.wait(self.card_number).send_keys(number)
-        field = self.wait(self.card_code)
+        field = WebDriverWait(self.driver, 30).until(EC.visibility_of_element_located(self.card_code))
+        field.click()
+        field.clear()
         field.send_keys(code)
         field.send_keys(Keys.TAB)
-        self.click(self.card_link)
+        self.click(self.card_add_button)
+        self.close_payment_window()
 
     def set_driver_message(self, message):
         self.wait(self.driver_message).send_keys(message)
 
+    def scroll_to_extras(self):
+        slider = WebDriverWait(self.driver, 30).until(
+            EC.visibility_of_element_located(self.blanket_tissues_slider))
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});", slider)
+
     def request_extras(self):
-        for locator in (self.blanket_toggle, self.tissues_toggle):
-            element = self.wait(locator)
-            if not element.is_selected():
-                element.click()
+        checkbox = self.wait(self.blanket_tissues_input)
+        if not checkbox.is_selected():
+            self.click(self.blanket_tissues_slider)
         for _ in range(2):
             self.click(self.ice_cream_plus)
 
@@ -164,44 +185,46 @@ class TestUrbanRoutes:
         options.set_capability("goog:loggingPrefs", {'performance': 'ALL'})
         cls.driver = webdriver.Chrome(options=options)
 
-    def test_set_route(self):
-        routes_page = UrbanRoutesPage(self.driver)
-        routes_page.open_app(data.urban_routes_url)
-        address_from = data.address_from
-        address_to = data.address_to
-        routes_page.set_route(address_from, address_to)
-        assert routes_page.get_from() == address_from
-        assert routes_page.get_to() == address_to
-
     def test_complete_taxi_order(self):
         page = UrbanRoutesPage(self.driver)
         page.open_app(data.urban_routes_url)
         page.set_route(data.address_from, data.address_to)
+        assert page.get_from() == data.address_from
+        assert page.get_to() == data.address_to
         page.open_fare_options()
         page.select_comfort()
         page.add_phone(data.phone_number)
         page.add_card(data.card_number, data.card_code)
         page.set_driver_message(data.message_for_driver)
+        page.scroll_to_extras()
         page.request_extras()
         page.order_taxi()
+
         assert WebDriverWait(self.driver, 20).until(
             EC.visibility_of_element_located(page.search_modal))
-
-    def test_driver_details_appear(self):
-        page = UrbanRoutesPage(self.driver)
-        page.open_app(data.urban_routes_url)
-        page.set_route(data.address_from, data.address_to)
-        page.open_fare_options()
-        page.select_comfort()
-        page.add_phone(data.phone_number)
-        page.add_card(data.card_number, data.card_code)
-        page.set_driver_message(data.message_for_driver)
-        page.request_extras()
-        page.order_taxi()
-        assert WebDriverWait(self.driver, 180).until(
+        WebDriverWait(self.driver, 180).until(
             EC.visibility_of_element_located(page.driver_info))
+        rating = WebDriverWait(self.driver, 10).until(
+            EC.visibility_of_element_located(page.driver_rating))
+        assert rating.text.strip()
 
     @classmethod
     def teardown_class(cls):
         cls.driver.quit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
