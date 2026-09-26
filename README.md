@@ -1,6 +1,6 @@
 # Sprint 9: Proyecto Urban Routes - TripleTen
 
-Pruebas automatizadas de extremo a extremo para validar la solicitud de un taxi Comfort en **Urban Routes**, desde la configuración de la ruta hasta la asignación del conductor.
+Este proyecto contiene una prueba automatizada de extremo a extremo para validar el flujo de solicitud de un taxi Comfort en **Urban Routes**. La prueba configura la ruta, agrega teléfono y tarjeta, escribe un mensaje, selecciona extras y comprueba que aparezca la información del conductor.
 
 ## 📂 Estructura del proyecto
 
@@ -8,6 +8,12 @@ Pruebas automatizadas de extremo a extremo para validar la solicitud de un taxi 
 - `pages.py` → Page Object, localizadores y acciones de Selenium
 - `main.py` → Escenarios y verificaciones con pytest
 - `requirements.txt` → Dependencias del proyecto
+
+## 🛠️ Tecnologías utilizadas
+
+- **Python** para el código de automatización
+- **Selenium WebDriver** para interactuar con la aplicación web
+- **Pytest** para ejecutar la prueba
 
 ## ⚙️ Requisitos e instalación
 
@@ -26,4 +32,10 @@ py -m pip install -r requirements.txt
 py -m pytest main.py -v
 ```
 
-Las pruebas avanzan secuencialmente en una misma sesión del navegador. Selenium abrirá Chrome; mantenlo abierto durante la ejecución. La URL y los datos se pueden cambiar en `data.py`.
+La opción `-v` muestra el resultado detallado.
+
+## 📌 Notas
+
+- Las pruebas avanzan secuencialmente en una misma sesión del navegador. 
+- Selenium abrirá Chrome; mantenlo abierto durante la ejecución. 
+- La URL y los datos se pueden cambiar en `data.py`.
