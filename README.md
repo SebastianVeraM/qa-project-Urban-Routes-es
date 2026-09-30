@@ -36,6 +36,6 @@ La opción `-v` muestra el resultado detallado.
 
 ## 📌 Notas
 
-- Las pruebas avanzan secuencialmente en una misma sesión del navegador. 
-- Selenium abrirá Chrome; mantenlo abierto durante la ejecución. 
+- Cada prueba abre y cierra su propia sesión de Chrome.
+- Puedes ejecutar un escenario aislado, por ejemplo: `py -m pytest main.py -v -k test_add_card`.
 - La URL y los datos se pueden cambiar en `data.py`.
